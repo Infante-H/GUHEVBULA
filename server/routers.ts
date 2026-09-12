@@ -6,25 +6,45 @@ import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import {
   assignCourseInstructor,
+  createAdminAssignment,
+  createAdminLesson,
+  createAdminModule,
+  createAdminQuestion,
+  createAdminQuiz,
   createAdminCategory,
   createAdminCourse,
   createInstructor,
   createPartnershipApplication,
   deleteAdminCategory,
   deleteAdminCourse,
+  deleteAdminAssignment,
+  deleteAdminLesson,
+  deleteAdminModule,
+  deleteAdminQuestion,
+  deleteAdminQuiz,
   deleteInstructor,
   getCourseLearning,
   getPublishedCourses,
   getStudentDashboard,
+  getInstructorPerformance,
   issueCertificate,
   listAdminCategories,
   listAdminCourses,
   listAdminInstructors,
+  listAdminAssignments,
+  listAdminLessons,
+  listAdminModules,
+  listAdminQuizzes,
   setLessonProgress,
   submitAssignment,
   submitQuiz,
   updateAdminCategory,
   updateAdminCourse,
+  updateAdminAssignment,
+  updateAdminLesson,
+  updateAdminModule,
+  updateAdminQuestion,
+  updateAdminQuiz,
   updateInstructor,
 } from "./db";
 
@@ -40,6 +60,7 @@ const requireRoles = (...roles: string[]) => protectedProcedure.use(({ ctx, next
 });
 const adminProcedure = requireRoles("admin");
 const studentProcedure = requireRoles("estudante", "user", "admin");
+const formadorProcedure = requireRoles("formador", "admin");
 
 const courseInput = z.object({
   title: z.string().min(3),
@@ -53,6 +74,11 @@ const courseInput = z.object({
   requirements: z.string().optional(),
   objectives: z.string().optional(),
 });
+const moduleInput = z.object({ courseId: z.number().int().positive(), title: z.string().min(2), position: z.number().int().min(0) });
+const lessonInput = z.object({ moduleId: z.number().int().positive(), title: z.string().min(2), description: z.string().optional(), type: z.enum(["video", "text", "pdf", "material"]), durationMinutes: z.number().int().positive(), position: z.number().int().min(0), isPublished: z.boolean() });
+const quizInput = z.object({ courseId: z.number().int().positive(), moduleId: z.number().int().positive().optional(), title: z.string().min(2), description: z.string().optional(), passingScore: z.number().int().min(0).max(100), attemptsAllowed: z.number().int().positive(), dueAt: z.coerce.date().optional() });
+const questionInput = z.object({ quizId: z.number().int().positive(), type: z.enum(["multiple_choice", "true_false", "open"]), question: z.string().min(5), options: z.array(z.string()).optional(), points: z.number().int().positive(), position: z.number().int().min(0) });
+const assignmentInput = z.object({ courseId: z.number().int().positive(), moduleId: z.number().int().positive().optional(), title: z.string().min(2), instructions: z.string().min(10), dueAt: z.coerce.date().optional(), maxScore: z.number().int().positive() });
 
 export const appRouter = router({
   system: systemRouter,
@@ -89,6 +115,9 @@ export const appRouter = router({
       submitAssignment: studentProcedure.input(z.object({ assignmentId: z.number().int().positive(), answerText: z.string().min(5) })).mutation(({ ctx, input }) => submitAssignment({ userId: ctx.user.id, ...input })),
       issueCertificate: studentProcedure.input(z.object({ courseId: z.number().int().positive() })).mutation(({ ctx, input }) => issueCertificate({ userId: ctx.user.id, ...input })),
     }),
+    formador: router({
+      performance: formadorProcedure.query(({ ctx }) => getInstructorPerformance(ctx.user.id)),
+    }),
     admin: router({
       courses: adminProcedure.query(() => listAdminCourses()),
       createCourse: adminProcedure.input(courseInput).mutation(({ ctx, input }) => createAdminCourse({ ...input, createdBy: ctx.user.id })),
@@ -103,6 +132,25 @@ export const appRouter = router({
       updateInstructor: adminProcedure.input(z.object({ id: z.number().int().positive(), name: z.string().min(2), email: z.string().email(), isActive: z.boolean() })).mutation(({ input }) => updateInstructor(input)),
       deleteInstructor: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteInstructor(input.id)),
       assignInstructor: adminProcedure.input(z.object({ courseId: z.number().int().positive(), userId: z.number().int().positive() })).mutation(({ ctx, input }) => assignCourseInstructor({ ...input, assignedBy: ctx.user.id })),
+      modules: adminProcedure.input(z.object({ courseId: z.number().int().positive() })).query(({ input }) => listAdminModules(input.courseId)),
+      createModule: adminProcedure.input(moduleInput).mutation(({ input }) => createAdminModule(input)),
+      updateModule: adminProcedure.input(moduleInput.omit({ courseId: true }).extend({ id: z.number().int().positive() })).mutation(({ input }) => updateAdminModule(input)),
+      deleteModule: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteAdminModule(input.id)),
+      lessons: adminProcedure.input(z.object({ moduleId: z.number().int().positive() })).query(({ input }) => listAdminLessons(input.moduleId)),
+      createLesson: adminProcedure.input(lessonInput).mutation(({ input }) => createAdminLesson(input)),
+      updateLesson: adminProcedure.input(lessonInput.omit({ moduleId: true }).extend({ id: z.number().int().positive() })).mutation(({ input }) => updateAdminLesson(input)),
+      deleteLesson: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteAdminLesson(input.id)),
+      quizzes: adminProcedure.input(z.object({ courseId: z.number().int().positive() })).query(({ input }) => listAdminQuizzes(input.courseId)),
+      createQuiz: adminProcedure.input(quizInput).mutation(({ input }) => createAdminQuiz(input)),
+      updateQuiz: adminProcedure.input(quizInput.omit({ courseId: true, moduleId: true }).extend({ id: z.number().int().positive(), dueAt: z.coerce.date().nullable().optional() })).mutation(({ input }) => updateAdminQuiz(input)),
+      deleteQuiz: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteAdminQuiz(input.id)),
+      createQuestion: adminProcedure.input(questionInput).mutation(({ input }) => createAdminQuestion(input)),
+      updateQuestion: adminProcedure.input(questionInput.omit({ quizId: true }).extend({ id: z.number().int().positive() })).mutation(({ input }) => updateAdminQuestion(input)),
+      deleteQuestion: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteAdminQuestion(input.id)),
+      assignments: adminProcedure.input(z.object({ courseId: z.number().int().positive() })).query(({ input }) => listAdminAssignments(input.courseId)),
+      createAssignment: adminProcedure.input(assignmentInput).mutation(({ input }) => createAdminAssignment(input)),
+      updateAssignment: adminProcedure.input(assignmentInput.omit({ courseId: true, moduleId: true }).extend({ id: z.number().int().positive(), dueAt: z.coerce.date().nullable().optional() })).mutation(({ input }) => updateAdminAssignment(input)),
+      deleteAssignment: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteAdminAssignment(input.id)),
     }),
   }),
 });

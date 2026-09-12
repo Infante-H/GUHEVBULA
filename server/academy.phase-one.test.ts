@@ -94,3 +94,17 @@ describe("academy.admin CRUD guards", () => {
     })).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 });
+
+
+describe("academy.curriculum and academy.formador", () => {
+  it("keeps curriculum CRUD restricted to administrators", async () => {
+    await expect(appRouter.createCaller(contextFor("formador")).academy.admin.modules({ courseId: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(appRouter.createCaller(contextFor("estudante")).academy.admin.createLesson({ moduleId: 1, title: "Aula", type: "text", durationMinutes: 10, position: 1, isPublished: false })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("returns a stable performance report contract for formadores", async () => {
+    const result = await appRouter.createCaller(contextFor("formador")).academy.formador.performance();
+    expect(result).toHaveProperty("courses");
+    expect(result.totals).toMatchObject({ students: expect.any(Number), averageProgress: expect.any(Number), pendingAssignments: expect.any(Number) });
+  });
+});

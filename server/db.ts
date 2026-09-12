@@ -11,6 +11,7 @@ import {
   enrollments,
   grades,
   lessons,
+  lessonMaterials,
   modules,
   profiles,
   quizAttempts,
@@ -325,4 +326,173 @@ export async function issueCertificate(input: { userId: number; courseId: number
   const certificateNumber = `VUKA-${new Date().getFullYear()}-${String(input.userId).padStart(5, "0")}-${String(input.courseId).padStart(3, "0")}`;
   await db.insert(certificates).values({ userId: input.userId, courseId: input.courseId, certificateNumber });
   return { certificateNumber, issued: true };
+}
+
+
+export async function listAdminModules(courseId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(modules).where(eq(modules.courseId, courseId)).orderBy(modules.position);
+}
+
+export async function createAdminModule(input: { courseId: number; title: string; position: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  const result = await db.insert(modules).values(input);
+  return Number(result[0].insertId);
+}
+
+export async function updateAdminModule(input: { id: number; title: string; position: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  await db.update(modules).set({ title: input.title, position: input.position }).where(eq(modules.id, input.id));
+  return { success: true };
+}
+
+export async function deleteAdminModule(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  await db.delete(modules).where(eq(modules.id, id));
+  return { success: true };
+}
+
+export async function listAdminLessons(moduleId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const lessonRows = await db.select().from(lessons).where(eq(lessons.moduleId, moduleId)).orderBy(lessons.position);
+  const lessonIds = lessonRows.map(row => row.id);
+  const materialRows = lessonIds.length ? await db.select().from(lessonMaterials).where(inArray(lessonMaterials.lessonId, lessonIds)) : [];
+  return lessonRows.map(row => ({ ...row, materials: materialRows.filter(material => material.lessonId === row.id) }));
+}
+
+export async function createAdminLesson(input: { moduleId: number; title: string; description?: string; type: "video" | "text" | "pdf" | "material"; durationMinutes: number; position: number; isPublished: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  const result = await db.insert(lessons).values(input);
+  return Number(result[0].insertId);
+}
+
+export async function updateAdminLesson(input: { id: number; title: string; description?: string; type: "video" | "text" | "pdf" | "material"; durationMinutes: number; position: number; isPublished: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  await db.update(lessons).set(input).where(eq(lessons.id, input.id));
+  return { success: true };
+}
+
+export async function deleteAdminLesson(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  await db.delete(lessons).where(eq(lessons.id, id));
+  return { success: true };
+}
+
+export async function listAdminQuizzes(courseId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select().from(quizzes).where(eq(quizzes.courseId, courseId));
+  const ids = rows.map(row => row.id);
+  const questions = ids.length ? await db.select().from(quizQuestions).where(inArray(quizQuestions.quizId, ids)).orderBy(quizQuestions.position) : [];
+  return rows.map(row => ({ ...row, questions: questions.filter(question => question.quizId === row.id) }));
+}
+
+export async function createAdminQuiz(input: { courseId: number; moduleId?: number; title: string; description?: string; passingScore: number; attemptsAllowed: number; dueAt?: Date }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  const result = await db.insert(quizzes).values(input);
+  return Number(result[0].insertId);
+}
+
+export async function updateAdminQuiz(input: { id: number; title: string; description?: string; passingScore: number; attemptsAllowed: number; dueAt?: Date | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  await db.update(quizzes).set(input).where(eq(quizzes.id, input.id));
+  return { success: true };
+}
+
+export async function deleteAdminQuiz(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  await db.delete(quizzes).where(eq(quizzes.id, id));
+  return { success: true };
+}
+
+export async function createAdminQuestion(input: { quizId: number; type: "multiple_choice" | "true_false" | "open"; question: string; options?: unknown; points: number; position: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  const result = await db.insert(quizQuestions).values(input);
+  return Number(result[0].insertId);
+}
+
+export async function updateAdminQuestion(input: { id: number; type: "multiple_choice" | "true_false" | "open"; question: string; options?: unknown; points: number; position: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  await db.update(quizQuestions).set(input).where(eq(quizQuestions.id, input.id));
+  return { success: true };
+}
+
+export async function deleteAdminQuestion(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  await db.delete(quizQuestions).where(eq(quizQuestions.id, id));
+  return { success: true };
+}
+
+export async function listAdminAssignments(courseId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(assignments).where(eq(assignments.courseId, courseId));
+}
+
+export async function createAdminAssignment(input: { courseId: number; moduleId?: number; title: string; instructions: string; dueAt?: Date; maxScore: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  const result = await db.insert(assignments).values(input);
+  return Number(result[0].insertId);
+}
+
+export async function updateAdminAssignment(input: { id: number; title: string; instructions: string; dueAt?: Date | null; maxScore: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  await db.update(assignments).set(input).where(eq(assignments.id, input.id));
+  return { success: true };
+}
+
+export async function deleteAdminAssignment(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  await db.delete(assignments).where(eq(assignments.id, id));
+  return { success: true };
+}
+
+export async function createLessonMaterial(input: { lessonId: number; name: string; fileKey: string; fileUrl: string; mimeType: string; isPrivate: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  const result = await db.insert(lessonMaterials).values(input);
+  return Number(result[0].insertId);
+}
+
+export async function getLessonForUpload(lessonId: number) {
+  const db = await getDb();
+  if (!db) return { id: lessonId, instructorIds: [] as number[] };
+  const row = await db.select({ id: lessons.id, courseId: modules.courseId }).from(lessons).innerJoin(modules, eq(lessons.moduleId, modules.id)).where(eq(lessons.id, lessonId)).limit(1);
+  if (!row[0]) return null;
+  const assignmentsRows = await db.select({ userId: courseInstructors.userId }).from(courseInstructors).where(eq(courseInstructors.courseId, row[0].courseId));
+  return { id: row[0].id, instructorIds: assignmentsRows.map(item => item.userId) };
+}
+
+export async function getInstructorPerformance(userId: number) {
+  const db = await getDb();
+  if (!db) return { courses: [{ courseId: 1, title: fallbackLearning.course.title, students: 18, averageProgress: 62, completionRate: 34, averageQuizScore: 78, pendingAssignments: 4 }], totals: { students: 18, averageProgress: 62, completionRate: 34, averageQuizScore: 78, pendingAssignments: 4 } };
+  const assigned = await db.select({ courseId: courseInstructors.courseId, title: courses.title }).from(courseInstructors).innerJoin(courses, eq(courseInstructors.courseId, courses.id)).where(eq(courseInstructors.userId, userId));
+  const courseIds = assigned.map(row => row.courseId);
+  if (!courseIds.length) return { courses: [], totals: { students: 0, averageProgress: 0, completionRate: 0, averageQuizScore: 0, pendingAssignments: 0 } };
+  const enrollmentRows = await db.select().from(enrollments).where(inArray(enrollments.courseId, courseIds));
+  const moduleRows = await db.select({ id: modules.id, courseId: modules.courseId }).from(modules).where(inArray(modules.courseId, courseIds));
+  const lessonRows = moduleRows.length ? await db.select({ id: lessons.id, moduleId: lessons.moduleId }).from(lessons).where(inArray(lessons.moduleId, moduleRows.map(row => row.id))) : [];
+  const progressRows = enrollmentRows.length && lessonRows.length ? await db.select().from(studentProgress).where(inArray(studentProgress.userId, enrollmentRows.map(row => row.userId))) : [];
+  const quizRows = await db.select({ courseId: quizzes.courseId, id: quizAttempts.id, score: quizAttempts.score }).from(quizAttempts).innerJoin(quizzes, eq(quizAttempts.quizId, quizzes.id)).where(inArray(quizzes.courseId, courseIds));
+  const assignmentRows = await db.select({ courseId: assignments.courseId, id: assignmentSubmissions.id, graded: grades.id }).from(assignments).leftJoin(assignmentSubmissions, eq(assignmentSubmissions.assignmentId, assignments.id)).leftJoin(grades, eq(grades.submissionId, assignmentSubmissions.id)).where(inArray(assignments.courseId, courseIds));
+  const reports = assigned.map(course => { const students = enrollmentRows.filter(row => row.courseId === course.courseId); const lessonsForCourse = lessonRows.filter(lesson => moduleRows.find(module => module.id === lesson.moduleId)?.courseId === course.courseId); const progressValues = students.map(student => { const completed = progressRows.filter(item => item.userId === student.userId && item.isCompleted && lessonsForCourse.some(lesson => lesson.id === item.lessonId)).length; return lessonsForCourse.length ? (completed / lessonsForCourse.length) * 100 : 0; }); const quizzes = quizRows.filter(row => row.courseId === course.courseId).map(row => Number(row.score ?? 0)); const pending = assignmentRows.filter(row => row.courseId === course.courseId && row.id && !row.graded).length; return { courseId: course.courseId, title: course.title, students: students.length, averageProgress: progressValues.length ? Math.round(progressValues.reduce((a, b) => a + b, 0) / progressValues.length) : 0, completionRate: students.length ? Math.round((students.filter(student => student.status === "completed").length / students.length) * 100) : 0, averageQuizScore: quizzes.length ? Math.round(quizzes.reduce((a, b) => a + b, 0) / quizzes.length) : 0, pendingAssignments: pending }; });
+  const totals = { students: reports.reduce((sum, row) => sum + row.students, 0), averageProgress: reports.length ? Math.round(reports.reduce((sum, row) => sum + row.averageProgress, 0) / reports.length) : 0, completionRate: reports.length ? Math.round(reports.reduce((sum, row) => sum + row.completionRate, 0) / reports.length) : 0, averageQuizScore: reports.length ? Math.round(reports.reduce((sum, row) => sum + row.averageQuizScore, 0) / reports.length) : 0, pendingAssignments: reports.reduce((sum, row) => sum + row.pendingAssignments, 0) };
+  return { courses: reports, totals };
 }

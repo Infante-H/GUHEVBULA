@@ -141,3 +141,11 @@ The current build now includes the core learning loop and administration surface
 - `drizzle/seed.sql` now includes a sample quiz, questions, and assignment for the project-management course.
 
 The backend remains the permission boundary. Student mutations require a signed-in student-compatible role, while all management mutations require `admin`. Production deployments should extend the same ownership checks to enrollment, instructor assignment, and company scope as those workspaces are expanded.
+
+## Phase 3 implemented
+
+The administration surface now includes `/admin/curriculum`, where administrators can select a course, create and reorder modules, manage lessons, publish or keep them as drafts, and remove obsolete content. Each lesson supports video, text, PDF, and material types and exposes a private-material upload control.
+
+The upload endpoint is `POST /api/lesson-materials/upload`. It authenticates the current Manus session, accepts files up to 250 MB, limits MIME types to video/PDF/archive/Office/text formats, stores bytes through the built-in S3-backed storage helper, and persists only the storage key, URL, filename, and MIME metadata in `lesson_materials`. Formadores are limited to lessons belonging to courses assigned to them.
+
+Quizzes now support create/delete, question creation and deletion, question types, answer options, points, ordering, passing scores, and attempt limits. Assignments support create/delete with instructions and maximum scores. The formador dashboard at `/formador/relatorios` aggregates active students, average progress, completion rate, quiz score, and pending assignment counts per assigned course.

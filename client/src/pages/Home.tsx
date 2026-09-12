@@ -42,6 +42,8 @@ import { toast } from "sonner";
 import StudentDashboard from "./StudentDashboard";
 import LearningPlayer from "./LearningPlayer";
 import AdminDashboard from "./AdminDashboard";
+import AdminCurriculum from "./AdminCurriculum";
+import InstructorReports from "./InstructorReports";
 
 type Course = {
   id: number;
@@ -185,6 +187,7 @@ function AppRoute() {
   const [location] = useLocation();
   if (location === "/" || location === "") return <HomePage />;
   if (location === "/dashboard") return <StudentDashboard />;
+  if (location === "/admin/curriculum") return <AdminCurriculum />;
   if (location.startsWith("/dashboard/cursos/")) return <LearningPlayer />;
   if (location === "/admin") return <AdminDashboard />;
   if (location === "/cursos") return <CatalogPage />;
@@ -194,6 +197,7 @@ function AppRoute() {
   if (location === "/sobre-nos") return <AboutPage />;
   if (location === "/admin") return <AdminDashboard />;
   if (location === "/formador") return <RolePage role="formador" />;
+  if (location === "/formador/relatorios") return <InstructorReports />;
   if (location === "/empresa") return <RolePage role="empresa" />;
   if (location === "/categorias") return <InfoPage title="Competências para continuar a crescer." eyebrow="Categorias" text="Explore percursos em dados, tecnologia, negócios, liderança e desenvolvimento pessoal. A navegação detalhada de categorias entra na Fase 2." icon={Layers3} />;
   if (location === "/instrutores") return <InfoPage title="Aprenda com quem pratica." eyebrow="Instrutores" text="Uma rede de especialistas para transformar experiência em aprendizagem aplicável." icon={Users} />;
