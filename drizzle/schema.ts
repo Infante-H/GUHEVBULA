@@ -220,6 +220,7 @@ export const studentProgress = mysqlTable(
     userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
     lessonId: int("lessonId").notNull().references(() => lessons.id, { onDelete: "cascade" }),
     isCompleted: boolean("isCompleted").default(false).notNull(),
+    videoPositionSeconds: int("videoPositionSeconds").default(0).notNull(),
     completedAt: timestamp("completedAt"),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },

@@ -1,0 +1,1 @@
+ALTER TABLE `student_progress` ADD `videoPositionSeconds` int DEFAULT 0 NOT NULL;

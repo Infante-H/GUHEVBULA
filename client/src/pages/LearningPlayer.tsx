@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "wouter";
 import { Award, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, FileText, FileVideo, ExternalLink, LockKeyhole, PlayCircle, Send, Trophy } from "lucide-react";
 import { toast } from "sonner";
@@ -35,10 +35,24 @@ export default function LearningPlayer() {
 }
 
 function LessonMedia({ lesson }: { lesson: any }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const lastSaved = useRef(0);
+  const saveProgress = trpc.academy.student.saveVideoProgress.useMutation();
+  const [playbackRate, setPlaybackRate] = useState(1);
+  useEffect(() => {
+    if (videoRef.current && lesson?.videoPositionSeconds) videoRef.current.currentTime = lesson.videoPositionSeconds;
+    setPlaybackRate(1);
+  }, [lesson?.id, lesson?.videoPositionSeconds]);
+  const persist = (seconds: number) => {
+    if (!lesson?.id || seconds < 1 || Math.abs(seconds - lastSaved.current) < 5) return;
+    lastSaved.current = seconds;
+    saveProgress.mutate({ lessonId: lesson.id, videoPositionSeconds: Math.floor(seconds) });
+  };
   const material = lesson?.materials?.[0];
   if (lesson?.type === "video") {
     const video = lesson.materials?.find((item: any) => item.mimeType?.startsWith("video/")) ?? material;
-    return video?.fileUrl ? <div className="w-full max-w-4xl overflow-hidden rounded-2xl bg-black shadow-2xl"><video controls playsInline preload="metadata" className="aspect-video w-full" src={video.fileUrl}><track kind="captions" /></video></div> : <div className="grid h-20 w-20 place-items-center rounded-full bg-[#0b4151] text-[#b8e2d6] shadow-xl"><PlayCircle size={34} fill="currentColor" /></div>;
+    const captions = lesson.materials?.find((item: any) => ["text/vtt", "application/x-subrip"].includes(item.mimeType));
+    return video?.fileUrl ? <div className="w-full max-w-4xl overflow-hidden rounded-2xl bg-black shadow-2xl"><video ref={videoRef} controls playsInline preload="metadata" className="aspect-video w-full" src={video.fileUrl} onLoadedMetadata={event => { if (lesson.videoPositionSeconds) event.currentTarget.currentTime = lesson.videoPositionSeconds; }} onTimeUpdate={event => persist(event.currentTarget.currentTime)} onPause={event => persist(event.currentTarget.currentTime)}><track kind="captions" src={captions?.fileUrl} srcLang="pt" label="Português" default={Boolean(captions)} /></video><div className="flex items-center justify-between gap-3 bg-[#102b47] px-4 py-3 text-xs text-white"><label className="flex items-center gap-2 font-bold">Velocidade<select value={playbackRate} onChange={event => { const value = Number(event.target.value); setPlaybackRate(value); if (videoRef.current) videoRef.current.playbackRate = value; }} className="rounded-lg bg-white/10 px-2 py-1 text-white"><option value="0.75">0,75×</option><option value="1">1×</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></label><span className="text-[#b8e2d6]">{captions ? "Legendas disponíveis" : "Sem legendas disponíveis"}</span></div></div> : <div className="grid h-20 w-20 place-items-center rounded-full bg-[#0b4151] text-[#b8e2d6] shadow-xl"><PlayCircle size={34} fill="currentColor" /></div>;
   }
   if (lesson?.type === "pdf") {
     const pdf = lesson.materials?.find((item: any) => item.mimeType === "application/pdf") ?? material;

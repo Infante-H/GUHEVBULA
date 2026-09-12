@@ -277,7 +277,7 @@ export async function getCourseLearning(courseId: number, userId: number) {
   const quizRows = await db.select().from(quizzes).where(eq(quizzes.courseId, courseId)).limit(1);
   const quiz = quizRows[0] ? { ...quizRows[0], questions: await db.select().from(quizQuestions).where(eq(quizQuestions.quizId, quizRows[0].id)).orderBy(quizQuestions.position) } : null;
   const assignmentRows = await db.select().from(assignments).where(eq(assignments.courseId, courseId)).limit(1);
-  return { course: { ...courseRows[0], lessonsTotal: total, completedLessons: done, progress: total ? Math.round((done / total) * 100) : 0 }, modules: moduleRows.map(module => ({ ...module, lessons: lessonRows.filter(lesson => lesson.moduleId === module.id).map(lesson => ({ ...lesson, completed: completed.has(lesson.id), materials: materialRows.filter(material => material.lessonId === lesson.id) })) })), quiz, assignment: assignmentRows[0] ?? null };
+  return { course: { ...courseRows[0], lessonsTotal: total, completedLessons: done, progress: total ? Math.round((done / total) * 100) : 0 }, modules: moduleRows.map(module => ({ ...module, lessons: lessonRows.filter(lesson => lesson.moduleId === module.id).map(lesson => ({ ...lesson, completed: completed.has(lesson.id), videoPositionSeconds: progressRows.find(progress => progress.lessonId === lesson.id)?.videoPositionSeconds ?? 0, materials: materialRows.filter(material => material.lessonId === lesson.id) })) })), quiz, assignment: assignmentRows[0] ?? null };
 }
 
 export async function setLessonProgress(input: { userId: number; lessonId: number; completed: boolean }) {
@@ -285,6 +285,13 @@ export async function setLessonProgress(input: { userId: number; lessonId: numbe
   if (!db) return { success: true, completed: input.completed };
   await db.insert(studentProgress).values({ userId: input.userId, lessonId: input.lessonId, isCompleted: input.completed, completedAt: input.completed ? new Date() : null }).onDuplicateKeyUpdate({ set: { isCompleted: input.completed, completedAt: input.completed ? new Date() : null } });
   return { success: true, completed: input.completed };
+}
+
+export async function setVideoProgress(input: { userId: number; lessonId: number; videoPositionSeconds: number }) {
+  const db = await getDb();
+  if (!db) return { success: true, videoPositionSeconds: input.videoPositionSeconds };
+  await db.insert(studentProgress).values({ userId: input.userId, lessonId: input.lessonId, videoPositionSeconds: input.videoPositionSeconds }).onDuplicateKeyUpdate({ set: { videoPositionSeconds: input.videoPositionSeconds } });
+  return { success: true, videoPositionSeconds: input.videoPositionSeconds };
 }
 
 export async function submitQuiz(input: { userId: number; quizId: number; answers: Record<string, string> }) {

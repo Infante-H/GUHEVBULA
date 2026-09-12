@@ -153,3 +153,7 @@ Quizzes now support create/delete, question creation and deletion, question type
 ## Phase 4 implemented
 
 The student player now renders uploaded video materials with native browser controls and embeds uploaded PDFs directly in the lesson view; other lesson materials remain available as secure links. Formador reports accept a date range, course, persisted turma/cohort, and student filter, returning filtered metrics and selectable filter options. Administrators can edit existing quiz questions and assignments inline, including question type, options, points, ordering, instructions, due date, and maximum score.
+
+## Phase 5 implemented
+
+The student video player now supports WebVTT/SRT caption tracks when uploaded as lesson materials, selectable playback speeds from 0.75x to 2x, and persisted playback position per student and lesson. Formador reports expose CSV and PDF download buttons that preserve the active period, course, turma, and student filters; the PDF route is authenticated and returns a generated PDF attachment. Administrators can fully edit quiz title, description, passing score, attempt limit, and due date inline from the curriculum manager.

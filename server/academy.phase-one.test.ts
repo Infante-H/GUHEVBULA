@@ -123,3 +123,15 @@ describe("academy.reports and assessment editing", () => {
     await expect(caller.academy.admin.updateAssignment({ id: 1, title: "Trabalho atualizado", instructions: "Instruções suficientemente longas.", maxScore: 100 })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });
+
+
+describe("academy.video and quiz editing", () => {
+  it("persists video progress through the student procedure contract", async () => {
+    const result = await appRouter.createCaller(contextFor("estudante")).academy.student.saveVideoProgress({ lessonId: 101, videoPositionSeconds: 42 });
+    expect(result).toMatchObject({ success: true, videoPositionSeconds: 42 });
+  });
+
+  it("keeps complete quiz editing restricted to administrators", async () => {
+    await expect(appRouter.createCaller(contextFor("formador")).academy.admin.updateQuiz({ id: 1, title: "Quiz atualizado", description: "Descrição", passingScore: 80, attemptsAllowed: 2, dueAt: null })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});
