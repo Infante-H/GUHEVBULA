@@ -128,3 +128,16 @@ Role checks live in backend procedures. The next phases must continue to enforce
 8. Certificates, notifications, and reports.
 9. Payment-ready integrations.
 10. Security hardening, end-to-end tests, production, and documentation.
+
+## Phase 2 implemented
+
+The current build now includes the core learning loop and administration surface:
+
+- Student dashboard with overall progress, active courses, next lesson, activity summary, and certificate count.
+- Learning player at `/dashboard/cursos/:id` with module/lesson navigation, video/text/PDF lesson states, persisted completion mutations, quiz submission, assignment submission, and certificate issuance.
+- Quiz and assignment persistence through `quiz_attempts`, `assignment_submissions`, and `grades`.
+- Certificate issuance with unique certificate numbers stored in `certificates`; the demo fallback returns a deterministic number when the demo account is not yet persisted.
+- Admin dashboard at `/admin` with protected access and CRUD operations for courses, categories, and formadores. Instructor removal is implemented as a safe soft deactivation, preserving historical ownership and auditability.
+- `drizzle/seed.sql` now includes a sample quiz, questions, and assignment for the project-management course.
+
+The backend remains the permission boundary. Student mutations require a signed-in student-compatible role, while all management mutations require `admin`. Production deployments should extend the same ownership checks to enrollment, instructor assignment, and company scope as those workspaces are expanded.

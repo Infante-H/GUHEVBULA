@@ -50,3 +50,47 @@ describe("academy.adminCheck", () => {
     });
   });
 });
+
+
+describe("academy.student", () => {
+  it("returns a course learning structure with modules and assessments", async () => {
+    const result = await appRouter.createCaller(contextFor("estudante")).academy.student.course({ courseId: 1 });
+    expect(result.course.title).toContain("Gestão de Projetos");
+    expect(result.modules.length).toBeGreaterThan(0);
+    expect(result.quiz?.questions.length).toBeGreaterThan(0);
+    expect(result.assignment?.title).toContain("Mapa");
+  });
+
+  it("supports lesson completion and demo certificate issuance", async () => {
+    const caller = appRouter.createCaller(contextFor("estudante"));
+    await expect(caller.academy.student.markLesson({ lessonId: 101, completed: true })).resolves.toMatchObject({ success: true, completed: true });
+    await expect(caller.academy.student.issueCertificate({ courseId: 1 })).resolves.toMatchObject({ issued: true });
+  });
+});
+
+
+describe("academy.admin CRUD guards", () => {
+  it("rejects course management for non-admin roles", async () => {
+    await expect(appRouter.createCaller(contextFor("formador")).academy.admin.createCourse({
+      title: "Curso de teste",
+      slug: "curso-de-teste",
+      description: "Descrição suficientemente longa para passar a validação.",
+      level: "iniciante",
+      price: "0.00",
+      status: "draft",
+      certificateEnabled: true,
+    })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("validates slugs before attempting course persistence", async () => {
+    await expect(appRouter.createCaller(contextFor("admin")).academy.admin.createCourse({
+      title: "Curso de teste",
+      slug: "Slug inválido",
+      description: "Descrição suficientemente longa para passar a validação.",
+      level: "iniciante",
+      price: "0.00",
+      status: "draft",
+      certificateEnabled: true,
+    })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+});

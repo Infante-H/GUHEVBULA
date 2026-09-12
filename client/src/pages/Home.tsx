@@ -39,6 +39,9 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import StudentDashboard from "./StudentDashboard";
+import LearningPlayer from "./LearningPlayer";
+import AdminDashboard from "./AdminDashboard";
 
 type Course = {
   id: number;
@@ -181,13 +184,15 @@ function RolePage({ role }: { role: "admin" | "formador" | "empresa" }) { const 
 function AppRoute() {
   const [location] = useLocation();
   if (location === "/" || location === "") return <HomePage />;
+  if (location === "/dashboard") return <StudentDashboard />;
+  if (location.startsWith("/dashboard/cursos/")) return <LearningPlayer />;
+  if (location === "/admin") return <AdminDashboard />;
   if (location === "/cursos") return <CatalogPage />;
   if (location.startsWith("/cursos/")) return <CourseDetail slug={location.split("/")[2] ?? ""} />;
   if (location === "/empresas") return <CompaniesPage />;
   if (location === "/empresas/parceiro") return <PartnerPage />;
   if (location === "/sobre-nos") return <AboutPage />;
-  if (location === "/dashboard") return <DashboardPage />;
-  if (location === "/admin") return <RolePage role="admin" />;
+  if (location === "/admin") return <AdminDashboard />;
   if (location === "/formador") return <RolePage role="formador" />;
   if (location === "/empresa") return <RolePage role="empresa" />;
   if (location === "/categorias") return <InfoPage title="Competências para continuar a crescer." eyebrow="Categorias" text="Explore percursos em dados, tecnologia, negócios, liderança e desenvolvimento pessoal. A navegação detalhada de categorias entra na Fase 2." icon={Layers3} />;

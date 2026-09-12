@@ -53,3 +53,24 @@ INSERT INTO lessons (moduleId, title, description, type, durationMinutes, positi
 SELECT id, 'Construir um plano simples', 'Um modelo prático para organizar a execução e comunicar o caminho.', 'pdf', 18, 1, true
 FROM modules WHERE title = 'Aplicar no dia a dia'
   AND NOT EXISTS (SELECT 1 FROM lessons l WHERE l.moduleId = modules.id AND l.title = 'Construir um plano simples');
+
+
+INSERT INTO quizzes (courseId, title, description, passingScore, attemptsAllowed)
+SELECT id, 'Checkpoint: fundamentos', 'Verifique o que já consegue aplicar.', 70, 3
+FROM courses WHERE slug = 'fundamentos-gestao-projetos'
+  AND NOT EXISTS (SELECT 1 FROM quizzes q WHERE q.courseId = courses.id AND q.title = 'Checkpoint: fundamentos');
+
+INSERT INTO quiz_questions (quizId, type, question, options, points, position)
+SELECT id, 'multiple_choice', 'Qual é o primeiro passo de um projeto bem conduzido?', JSON_ARRAY('Definir clareza e objetivo', 'Comprar ferramentas', 'Começar sem plano'), 1, 1
+FROM quizzes WHERE title = 'Checkpoint: fundamentos'
+  AND NOT EXISTS (SELECT 1 FROM quiz_questions qq WHERE qq.quizId = quizzes.id AND qq.position = 1);
+
+INSERT INTO quiz_questions (quizId, type, question, options, points, position)
+SELECT id, 'true_false', 'Um bom plano precisa ser comunicado à equipa.', JSON_ARRAY('Verdadeiro', 'Falso'), 1, 2
+FROM quizzes WHERE title = 'Checkpoint: fundamentos'
+  AND NOT EXISTS (SELECT 1 FROM quiz_questions qq WHERE qq.quizId = quizzes.id AND qq.position = 2);
+
+INSERT INTO assignments (courseId, title, instructions, maxScore, dueAt)
+SELECT id, 'Mapa do seu próximo projeto', 'Descreva o objetivo, as prioridades e o primeiro passo de um projeto real.', 100, '2026-10-15 23:59:00'
+FROM courses WHERE slug = 'fundamentos-gestao-projetos'
+  AND NOT EXISTS (SELECT 1 FROM assignments a WHERE a.courseId = courses.id AND a.title = 'Mapa do seu próximo projeto');
