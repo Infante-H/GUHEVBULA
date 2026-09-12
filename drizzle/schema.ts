@@ -146,6 +146,7 @@ export const enrollments = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     courseId: int("courseId").notNull().references(() => courses.id, { onDelete: "cascade" }),
     userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    cohort: varchar("cohort", { length: 120 }).default("Geral").notNull(),
     status: mysqlEnum("status", ["active", "completed", "cancelled"]).default("active").notNull(),
     enrolledAt: timestamp("enrolledAt").defaultNow().notNull(),
     completedAt: timestamp("completedAt"),

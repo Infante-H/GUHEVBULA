@@ -108,3 +108,18 @@ describe("academy.curriculum and academy.formador", () => {
     expect(result.totals).toMatchObject({ students: expect.any(Number), averageProgress: expect.any(Number), pendingAssignments: expect.any(Number) });
   });
 });
+
+
+describe("academy.reports and assessment editing", () => {
+  it("accepts formador report filters and returns filter options", async () => {
+    const result = await appRouter.createCaller(contextFor("formador")).academy.formador.performance({ cohort: "Geral" });
+    expect(result).toHaveProperty("filterOptions");
+    expect(result.filterOptions).toHaveProperty("students");
+  });
+
+  it("keeps question and assignment editing restricted to administrators", async () => {
+    const caller = appRouter.createCaller(contextFor("formador"));
+    await expect(caller.academy.admin.updateQuestion({ id: 1, type: "open", question: "Pergunta atualizada", points: 1, position: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.academy.admin.updateAssignment({ id: 1, title: "Trabalho atualizado", instructions: "Instruções suficientemente longas.", maxScore: 100 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});

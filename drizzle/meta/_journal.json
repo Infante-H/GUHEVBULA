@@ -15,6 +15,13 @@
       "when": 1789217382727,
       "tag": "0001_yummy_turbo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1789227973296,
+      "tag": "0002_worthless_wallflower",
+      "breakpoints": true
     }
   ]
 }

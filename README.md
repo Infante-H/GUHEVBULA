@@ -149,3 +149,7 @@ The administration surface now includes `/admin/curriculum`, where administrator
 The upload endpoint is `POST /api/lesson-materials/upload`. It authenticates the current Manus session, accepts files up to 250 MB, limits MIME types to video/PDF/archive/Office/text formats, stores bytes through the built-in S3-backed storage helper, and persists only the storage key, URL, filename, and MIME metadata in `lesson_materials`. Formadores are limited to lessons belonging to courses assigned to them.
 
 Quizzes now support create/delete, question creation and deletion, question types, answer options, points, ordering, passing scores, and attempt limits. Assignments support create/delete with instructions and maximum scores. The formador dashboard at `/formador/relatorios` aggregates active students, average progress, completion rate, quiz score, and pending assignment counts per assigned course.
+
+## Phase 4 implemented
+
+The student player now renders uploaded video materials with native browser controls and embeds uploaded PDFs directly in the lesson view; other lesson materials remain available as secure links. Formador reports accept a date range, course, persisted turma/cohort, and student filter, returning filtered metrics and selectable filter options. Administrators can edit existing quiz questions and assignments inline, including question type, options, points, ordering, instructions, due date, and maximum score.

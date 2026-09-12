@@ -1,0 +1,1 @@
+ALTER TABLE `enrollments` ADD `cohort` varchar(120) DEFAULT 'Geral' NOT NULL;

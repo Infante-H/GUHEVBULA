@@ -116,7 +116,7 @@ export const appRouter = router({
       issueCertificate: studentProcedure.input(z.object({ courseId: z.number().int().positive() })).mutation(({ ctx, input }) => issueCertificate({ userId: ctx.user.id, ...input })),
     }),
     formador: router({
-      performance: formadorProcedure.query(({ ctx }) => getInstructorPerformance(ctx.user.id)),
+      performance: formadorProcedure.input(z.object({ fromDate: z.coerce.date().optional(), toDate: z.coerce.date().optional(), courseId: z.number().int().positive().optional(), cohort: z.string().optional(), studentId: z.number().int().positive().optional() }).optional()).query(({ ctx, input }) => getInstructorPerformance(ctx.user.id, input ?? {})),
     }),
     admin: router({
       courses: adminProcedure.query(() => listAdminCourses()),

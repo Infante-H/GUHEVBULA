@@ -62,3 +62,7 @@ button { cursor: pointer; }
 @media (max-width: 720px) {
   .container, .container-tight { width: min(100% - 32px, 1180px); }
 }
+
+
+.filter-input { height: 2.75rem; min-width: 9.5rem; border: 1px solid #dce5e1; border-radius: 0.75rem; background: #fff; padding: 0 0.75rem; color: #142335; font-size: 0.875rem; outline: none; }
+.filter-input:focus { border-color: #4f8f80; box-shadow: 0 0 0 3px rgba(85,185,161,.14); }
