@@ -48,6 +48,26 @@ import {
   updateAdminQuiz,
   updateInstructor,
 } from "./db";
+import {
+  addCompanyMember,
+  assignCompanyCourse,
+  getAdminOverview,
+  getCompanyDashboard,
+  getCompanyPerformance,
+  listAdminCompanies,
+  listAdminUsers,
+  listCompanyCertificates,
+  listCompanyCourses,
+  listCompanyMembers,
+  listNotifications,
+  listPartnershipApplications,
+  markNotificationRead,
+  reviewPartnershipApplication,
+  setCompanyMemberActive,
+  setCompanyStatus,
+  setUserActive,
+  updateCompany,
+} from "./companyDb";
 
 const demoCourses = [
   { id: 1, title: "Fundamentos de Gestão de Projetos", slug: "fundamentos-gestao-projetos", description: "Aprenda a planear, executar e entregar projetos com mais clareza, ritmo e impacto.", level: "iniciante", price: "0.00", currency: "MZN", status: "published", coverImage: "linear-gradient(135deg, #102b47 0%, #176d70 100%)", categoryLabel: "Negócios", duration: "6 semanas", lessons: 28, accent: "teal" },
@@ -62,6 +82,7 @@ const requireRoles = (...roles: string[]) => protectedProcedure.use(({ ctx, next
 const adminProcedure = requireRoles("admin");
 const studentProcedure = requireRoles("estudante", "user", "admin");
 const formadorProcedure = requireRoles("formador", "admin");
+const companyProcedure = requireRoles("empresa");
 
 const courseInput = z.object({
   title: z.string().min(3),
@@ -104,6 +125,7 @@ export const appRouter = router({
     phaseOne: publicProcedure.query(() => ({ status: "foundation-ready", roles: ["admin", "formador", "estudante", "empresa"], capabilities: ["database", "oauth", "role-protection", "portable-migrations", "private-storage-ready"] })),
     access: protectedProcedure.query(({ ctx }) => ({ user: ctx.user, destination: ctx.user.role === "admin" ? "/admin" : ctx.user.role === "formador" ? "/formador" : ctx.user.role === "empresa" ? "/empresa" : "/dashboard" })),
     adminCheck: adminProcedure.query(({ ctx }) => ({ ok: true, message: `Acesso administrativo confirmado para ${ctx.user.name ?? "Administrador"}.` })),
+    adminOverview: adminProcedure.query(() => getAdminOverview()),
     applyPartnership: publicProcedure.input(z.object({ companyName: z.string().min(2), contactName: z.string().min(2), businessEmail: z.string().email(), phone: z.string().optional(), country: z.string().optional(), city: z.string().optional(), sector: z.string().optional(), employeeCount: z.number().int().positive().optional(), trainingCount: z.number().int().positive().optional(), interests: z.string().optional(), message: z.string().optional() })).mutation(async ({ input }) => {
       const id = await createPartnershipApplication(input);
       return { trackingCode: `VUKA-${String(id).padStart(5, "0")}`, status: "pending" as const };
@@ -120,7 +142,29 @@ export const appRouter = router({
     formador: router({
       performance: formadorProcedure.input(z.object({ fromDate: z.coerce.date().optional(), toDate: z.coerce.date().optional(), courseId: z.number().int().positive().optional(), cohort: z.string().optional(), studentId: z.number().int().positive().optional() }).optional()).query(({ ctx, input }) => getInstructorPerformance(ctx.user.id, input ?? {})),
     }),
+    company: router({
+      dashboard: companyProcedure.query(({ ctx }) => getCompanyDashboard(ctx.user.id)),
+      members: companyProcedure.query(({ ctx }) => listCompanyMembers(ctx.user.id)),
+      addMember: companyProcedure.input(z.object({ name: z.string().min(2), email: z.string().email() })).mutation(({ ctx, input }) => addCompanyMember({ actorId: ctx.user.id, ...input })),
+      setMemberActive: companyProcedure.input(z.object({ userId: z.number().int().positive(), active: z.boolean() })).mutation(({ ctx, input }) => setCompanyMemberActive({ actorId: ctx.user.id, ...input })),
+      courses: companyProcedure.query(({ ctx }) => listCompanyCourses(ctx.user.id)),
+      assignCourse: companyProcedure.input(z.object({ courseId: z.number().int().positive(), userId: z.number().int().positive(), dueAt: z.coerce.date().optional() })).mutation(({ ctx, input }) => assignCompanyCourse({ actorId: ctx.user.id, ...input })),
+      performance: companyProcedure.input(z.object({ courseId: z.number().int().positive().optional(), memberId: z.number().int().positive().optional(), status: z.enum(["assigned", "in_progress", "completed", "expired"]).optional() }).optional()).query(({ ctx, input }) => getCompanyPerformance(ctx.user.id, input ?? {})),
+      certificates: companyProcedure.query(({ ctx }) => listCompanyCertificates(ctx.user.id)),
+    }),
+    notifications: router({
+      list: protectedProcedure.query(({ ctx }) => listNotifications(ctx.user.id)),
+      markRead: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => markNotificationRead(ctx.user.id, input.id)),
+    }),
     admin: router({
+      overview: adminProcedure.query(() => getAdminOverview()),
+      companies: adminProcedure.query(() => listAdminCompanies()),
+      updateCompany: adminProcedure.input(z.object({ id: z.number().int().positive(), name: z.string().min(2), contactName: z.string().optional(), contactEmail: z.string().email().optional(), phone: z.string().optional(), country: z.string().optional(), city: z.string().optional(), sector: z.string().optional(), employeeCount: z.number().int().min(0) })).mutation(({ ctx, input }) => updateCompany({ ...input, adminId: ctx.user.id })),
+      setCompanyStatus: adminProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["approved", "rejected", "suspended", "under_review"]) })).mutation(({ ctx, input }) => setCompanyStatus({ ...input, adminId: ctx.user.id })),
+      applications: adminProcedure.input(z.object({ status: z.enum(["pending", "under_review", "approved", "rejected"]).optional(), country: z.string().optional(), sector: z.string().optional(), company: z.string().optional() }).optional()).query(({ input }) => listPartnershipApplications(input ?? {})),
+      reviewApplication: adminProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["under_review", "approved", "rejected"]) })).mutation(({ ctx, input }) => reviewPartnershipApplication({ ...input, reviewerId: ctx.user.id })),
+      users: adminProcedure.input(z.object({ role: z.string().optional() }).optional()).query(({ input }) => listAdminUsers(input?.role)),
+      setUserActive: adminProcedure.input(z.object({ userId: z.number().int().positive(), active: z.boolean() })).mutation(({ ctx, input }) => setUserActive({ ...input, adminId: ctx.user.id })),
       courses: adminProcedure.query(() => listAdminCourses()),
       createCourse: adminProcedure.input(courseInput).mutation(({ ctx, input }) => createAdminCourse({ ...input, createdBy: ctx.user.id })),
       updateCourse: adminProcedure.input(courseInput.extend({ id: z.number().int().positive() })).mutation(({ input }) => updateAdminCourse(input)),

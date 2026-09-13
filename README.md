@@ -157,3 +157,19 @@ The student player now renders uploaded video materials with native browser cont
 ## Phase 5 implemented
 
 The student video player now supports WebVTT/SRT caption tracks when uploaded as lesson materials, selectable playback speeds from 0.75x to 2x, and persisted playback position per student and lesson. Formador reports expose CSV and PDF download buttons that preserve the active period, course, turma, and student filters; the PDF route is authenticated and returns a generated PDF attachment. Administrators can fully edit quiz title, description, passing score, attempt limit, and due date inline from the curriculum manager.
+
+## Phase 6 — Portal empresarial e administração global
+
+A aplicação inclui um portal B2B completo e uma camada administrativa global, com controlo de acesso por papel e isolamento de dados por empresa.
+
+### Área empresarial
+
+A área `/empresa` oferece dashboard com métricas de colaboradores, cursos atribuídos, progresso médio, conclusões e certificados. As subáreas `/empresa/colaboradores`, `/empresa/cursos`, `/empresa/desempenho`, `/empresa/relatorios` e `/empresa/certificados` permitem gerir a equipa, adicionar colaboradores, atribuir cursos com prazo, acompanhar estados e progresso, consultar certificados e exportar relatórios em CSV ou PDF.
+
+### Administração global
+
+As rotas `/admin/empresas`, `/admin/empresas/candidaturas` e `/admin/utilizadores` dão ao administrador uma visão consolidada das organizações, candidaturas B2B e contas da plataforma. É possível aprovar, rejeitar, suspender ou reativar empresas; editar os seus dados; analisar candidaturas; filtrar utilizadores por papel; e ativar ou desativar contas. O centro `/admin` apresenta métricas reais do banco de dados, incluindo estudantes, formadores, empresas, cursos publicados, certificados e candidaturas pendentes.
+
+### Segurança e operação
+
+Os procedimentos B2B são protegidos por `companyProcedure` e limitam membros, cursos, atribuições, desempenho e certificados à organização autenticada. As operações administrativas usam `adminProcedure`. A tabela `audit_logs` regista alterações sensíveis e a tabela `notifications` suporta avisos de atribuição, convites e aprovação de candidaturas. A exportação PDF empresarial é autenticada no servidor e utiliza os mesmos limites de isolamento da área da empresa.

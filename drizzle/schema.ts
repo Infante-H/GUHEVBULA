@@ -242,10 +242,15 @@ export const companies = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     ownerUserId: int("ownerUserId").references(() => users.id, { onDelete: "set null" }),
     name: varchar("name", { length: 180 }).notNull(),
+    contactName: varchar("contactName", { length: 180 }),
+    contactEmail: varchar("contactEmail", { length: 320 }),
+    phone: varchar("phone", { length: 40 }),
     country: varchar("country", { length: 120 }),
     city: varchar("city", { length: 120 }),
     sector: varchar("sector", { length: 120 }),
-    status: mysqlEnum("status", ["pending", "approved", "suspended"]).default("pending").notNull(),
+    employeeCount: int("employeeCount").default(0).notNull(),
+    status: mysqlEnum("status", ["pending", "under_review", "approved", "rejected", "suspended"]).default("pending").notNull(),
+    approvedAt: timestamp("approvedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   table => ({ statusIdx: index("companies_status_idx").on(table.status) })
@@ -267,7 +272,10 @@ export const companyCourseAssignments = mysqlTable("company_course_assignments",
   id: int("id").autoincrement().primaryKey(),
   companyId: int("companyId").notNull().references(() => companies.id, { onDelete: "cascade" }),
   courseId: int("courseId").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  userId: int("userId").references(() => users.id, { onDelete: "cascade" }),
   assignedBy: int("assignedBy").notNull().references(() => users.id, { onDelete: "restrict" }),
+  dueAt: timestamp("dueAt"),
+  status: mysqlEnum("status", ["assigned", "in_progress", "completed", "expired"]).default("assigned").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -288,10 +296,22 @@ export const companyPartnershipApplications = mysqlTable(
     message: text("message"),
     acceptedTerms: boolean("acceptedTerms").default(false).notNull(),
     status: mysqlEnum("status", ["pending", "under_review", "approved", "rejected"]).default("pending").notNull(),
+    reviewedBy: int("reviewedBy").references(() => users.id, { onDelete: "set null" }),
+    approvedAt: timestamp("approvedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   table => ({ applicationStatusIdx: index("partnership_applications_status_idx").on(table.status) })
 );
+
+export const auditLogs = mysqlTable("audit_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").references(() => users.id, { onDelete: "set null" }),
+  action: varchar("action", { length: 120 }).notNull(),
+  resource: varchar("resource", { length: 120 }).notNull(),
+  resourceId: int("resourceId"),
+  result: varchar("result", { length: 40 }).default("success").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
 
 export const notifications = mysqlTable(
   "notifications",

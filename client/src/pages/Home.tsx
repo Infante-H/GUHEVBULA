@@ -3,6 +3,8 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
+import CompanyArea from "./CompanyArea";
+import AdminBusiness from "./AdminBusiness";
 import {
   Award,
   BarChart3,
@@ -188,6 +190,9 @@ function AppRoute() {
   if (location === "/" || location === "") return <HomePage />;
   if (location === "/dashboard") return <StudentDashboard />;
   if (location === "/admin/curriculum") return <AdminCurriculum />;
+  if (location === "/admin/empresas") return <AdminBusiness section="companies" />;
+  if (location === "/admin/empresas/candidaturas") return <AdminBusiness section="applications" />;
+  if (location === "/admin/utilizadores") return <AdminBusiness section="users" />;
   if (location.startsWith("/dashboard/cursos/")) return <LearningPlayer />;
   if (location === "/admin") return <AdminDashboard />;
   if (location === "/cursos") return <CatalogPage />;
@@ -198,7 +203,7 @@ function AppRoute() {
   if (location === "/admin") return <AdminDashboard />;
   if (location === "/formador") return <RolePage role="formador" />;
   if (location === "/formador/relatorios") return <InstructorReports />;
-  if (location === "/empresa") return <RolePage role="empresa" />;
+  if (location === "/empresa" || location.startsWith("/empresa/")) return <CompanyArea />;
   if (location === "/categorias") return <InfoPage title="Competências para continuar a crescer." eyebrow="Categorias" text="Explore percursos em dados, tecnologia, negócios, liderança e desenvolvimento pessoal. A navegação detalhada de categorias entra na Fase 2." icon={Layers3} />;
   if (location === "/instrutores") return <InfoPage title="Aprenda com quem pratica." eyebrow="Instrutores" text="Uma rede de especialistas para transformar experiência em aprendizagem aplicável." icon={Users} />;
   if (location === "/contactos") return <InfoPage title="Fale connosco." eyebrow="Contactos" text="Estamos a construir uma plataforma para a próxima geração de profissionais africanos. Em breve, poderá falar diretamente com a nossa equipa." icon={Phone} />;

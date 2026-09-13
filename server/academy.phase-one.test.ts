@@ -135,3 +135,35 @@ describe("academy.video and quiz editing", () => {
     await expect(appRouter.createCaller(contextFor("formador")).academy.admin.updateQuiz({ id: 1, title: "Quiz atualizado", description: "Descrição", passingScore: 80, attemptsAllowed: 2, dueAt: null })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });
+
+
+describe("academy.business isolation and administration", () => {
+  it("rejects non-company users from company dashboard procedures", async () => {
+    await expect(appRouter.createCaller(contextFor("estudante")).academy.company.dashboard()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(appRouter.createCaller(contextFor("formador")).academy.company.members()).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rejects company users from global admin company management", async () => {
+    await expect(appRouter.createCaller(contextFor("empresa")).academy.admin.companies()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(appRouter.createCaller(contextFor("empresa")).academy.admin.users({ role: "all" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("allows administrators to query company and application contracts", async () => {
+    await expect(appRouter.createCaller(contextFor("admin")).academy.admin.companies()).resolves.toBeDefined();
+    await expect(appRouter.createCaller(contextFor("admin")).academy.admin.applications({ status: "pending" })).resolves.toBeDefined();
+  });
+
+  it("keeps company course assignment input constrained to positive identifiers", async () => {
+    await expect(appRouter.createCaller(contextFor("empresa")).academy.company.assignCourse({ courseId: 0, userId: 0 })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("protects notification reads by authenticated user context", async () => {
+    await expect(appRouter.createCaller(contextFor("estudante")).academy.notifications.list()).resolves.toBeDefined();
+    await expect(appRouter.createCaller(contextFor("user")).academy.notifications.markRead({ id: 1 })).resolves.toBeDefined();
+  });
+
+  it("exposes real admin overview metrics without fictitious dashboard values", async () => {
+    const result = await appRouter.createCaller(contextFor("admin")).academy.admin.overview();
+    expect(result).toMatchObject({ students: expect.any(Number), formadores: expect.any(Number), companies: expect.any(Number), publishedCourses: expect.any(Number), pendingApplications: expect.any(Number) });
+  });
+});

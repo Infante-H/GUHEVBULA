@@ -20,6 +20,11 @@ import {
   studentProgress,
   users,
   companyPartnershipApplications,
+  companies,
+  companyUsers,
+  companyCourseAssignments,
+  notifications,
+  auditLogs,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
