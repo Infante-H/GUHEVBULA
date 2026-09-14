@@ -157,6 +157,10 @@ export async function createAdminCourse(input: {
   categoryId?: number;
   level: "iniciante" | "intermedio" | "avancado";
   price: string;
+  currency?: string;
+  promotionalPrice?: string;
+  pricingType?: "free" | "paid";
+  commercialStatus?: "available" | "hidden" | "retired";
   status: "draft" | "published" | "archived";
   certificateEnabled: boolean;
   requirements?: string;
@@ -165,7 +169,7 @@ export async function createAdminCourse(input: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database is not configured");
-  const result = await db.insert(courses).values(input);
+  const result = await db.insert(courses).values({ ...input, currency: input.currency ?? "MZN", promotionalPrice: input.promotionalPrice || null, pricingType: input.pricingType ?? "free", commercialStatus: input.commercialStatus ?? "available" });
   return Number(result[0].insertId);
 }
 
@@ -177,6 +181,10 @@ export async function updateAdminCourse(input: {
   categoryId?: number;
   level: "iniciante" | "intermedio" | "avancado";
   price: string;
+  currency?: string;
+  promotionalPrice?: string;
+  pricingType?: "free" | "paid";
+  commercialStatus?: "available" | "hidden" | "retired";
   status: "draft" | "published" | "archived";
   certificateEnabled: boolean;
   requirements?: string;
@@ -191,6 +199,10 @@ export async function updateAdminCourse(input: {
     categoryId: input.categoryId,
     level: input.level,
     price: input.price,
+    currency: input.currency ?? "MZN",
+    promotionalPrice: input.promotionalPrice || null,
+    pricingType: input.pricingType ?? "free",
+    commercialStatus: input.commercialStatus ?? "available",
     status: input.status,
     certificateEnabled: input.certificateEnabled,
     requirements: input.requirements,

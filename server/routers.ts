@@ -68,6 +68,14 @@ import {
   setUserActive,
   updateCompany,
 } from "./companyDb";
+import {
+  confirmPayment,
+  createCheckoutPayment,
+  getCheckoutCourse,
+  getPaymentFilterOptions,
+  getStudentPayments,
+  listAdminPayments,
+} from "./paymentDb";
 
 const demoCourses = [
   { id: 1, title: "Fundamentos de Gestão de Projetos", slug: "fundamentos-gestao-projetos", description: "Aprenda a planear, executar e entregar projetos com mais clareza, ritmo e impacto.", level: "iniciante", price: "0.00", currency: "MZN", status: "published", coverImage: "linear-gradient(135deg, #102b47 0%, #176d70 100%)", categoryLabel: "Negócios", duration: "6 semanas", lessons: 28, accent: "teal" },
@@ -91,6 +99,10 @@ const courseInput = z.object({
   categoryId: z.number().int().positive().optional(),
   level: z.enum(["iniciante", "intermedio", "avancado"]),
   price: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  currency: z.string().length(3).default("MZN"),
+  promotionalPrice: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+  pricingType: z.enum(["free", "paid"]).default("free"),
+  commercialStatus: z.enum(["available", "hidden", "retired"]).default("available"),
   status: z.enum(["draft", "published", "archived"]),
   certificateEnabled: z.boolean(),
   requirements: z.string().optional(),
@@ -123,6 +135,7 @@ export const appRouter = router({
       }
     }),
     phaseOne: publicProcedure.query(() => ({ status: "foundation-ready", roles: ["admin", "formador", "estudante", "empresa"], capabilities: ["database", "oauth", "role-protection", "portable-migrations", "private-storage-ready"] })),
+    checkoutCourse: publicProcedure.input(z.object({ courseId: z.number().int().positive() })).query(({ input }) => getCheckoutCourse(input.courseId)),
     access: protectedProcedure.query(({ ctx }) => ({ user: ctx.user, destination: ctx.user.role === "admin" ? "/admin" : ctx.user.role === "formador" ? "/formador" : ctx.user.role === "empresa" ? "/empresa" : "/dashboard" })),
     adminCheck: adminProcedure.query(({ ctx }) => ({ ok: true, message: `Acesso administrativo confirmado para ${ctx.user.name ?? "Administrador"}.` })),
     adminOverview: adminProcedure.query(() => getAdminOverview()),
@@ -138,6 +151,8 @@ export const appRouter = router({
       submitQuiz: studentProcedure.input(z.object({ quizId: z.number().int().positive(), answers: z.record(z.string(), z.string()) })).mutation(({ ctx, input }) => submitQuiz({ userId: ctx.user.id, ...input })),
       submitAssignment: studentProcedure.input(z.object({ assignmentId: z.number().int().positive(), answerText: z.string().min(5) })).mutation(({ ctx, input }) => submitAssignment({ userId: ctx.user.id, ...input })),
       issueCertificate: studentProcedure.input(z.object({ courseId: z.number().int().positive() })).mutation(({ ctx, input }) => issueCertificate({ userId: ctx.user.id, ...input })),
+      createPayment: studentProcedure.input(z.object({ courseId: z.number().int().positive(), acceptedTerms: z.boolean() })).mutation(({ ctx, input }) => createCheckoutPayment({ userId: ctx.user.id, ...input })),
+      payments: studentProcedure.query(({ ctx }) => getStudentPayments(ctx.user.id)),
     }),
     formador: router({
       performance: formadorProcedure.input(z.object({ fromDate: z.coerce.date().optional(), toDate: z.coerce.date().optional(), courseId: z.number().int().positive().optional(), cohort: z.string().optional(), studentId: z.number().int().positive().optional() }).optional()).query(({ ctx, input }) => getInstructorPerformance(ctx.user.id, input ?? {})),
@@ -165,6 +180,9 @@ export const appRouter = router({
       reviewApplication: adminProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["under_review", "approved", "rejected"]) })).mutation(({ ctx, input }) => reviewPartnershipApplication({ ...input, reviewerId: ctx.user.id })),
       users: adminProcedure.input(z.object({ role: z.string().optional() }).optional()).query(({ input }) => listAdminUsers(input?.role)),
       setUserActive: adminProcedure.input(z.object({ userId: z.number().int().positive(), active: z.boolean() })).mutation(({ ctx, input }) => setUserActive({ ...input, adminId: ctx.user.id })),
+      payments: adminProcedure.input(z.object({ status: z.enum(["pending", "processing", "paid", "failed", "cancelled", "refunded"]).optional(), provider: z.string().optional(), userId: z.number().int().positive().optional(), courseId: z.number().int().positive().optional() }).optional()).query(({ input }) => listAdminPayments(input ?? {})),
+      paymentFilters: adminProcedure.query(() => getPaymentFilterOptions()),
+      confirmPayment: adminProcedure.input(z.object({ paymentId: z.number().int().positive(), status: z.enum(["paid", "failed", "cancelled", "refunded"]), transactionId: z.string().min(3).optional(), provider: z.string().min(2).optional() })).mutation(({ ctx, input }) => confirmPayment({ ...input, actorId: ctx.user.id })),
       courses: adminProcedure.query(() => listAdminCourses()),
       createCourse: adminProcedure.input(courseInput).mutation(({ ctx, input }) => createAdminCourse({ ...input, createdBy: ctx.user.id })),
       updateCourse: adminProcedure.input(courseInput.extend({ id: z.number().int().positive() })).mutation(({ input }) => updateAdminCourse(input)),

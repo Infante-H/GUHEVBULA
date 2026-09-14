@@ -167,3 +167,20 @@ describe("academy.business isolation and administration", () => {
     expect(result).toMatchObject({ students: expect.any(Number), formadores: expect.any(Number), companies: expect.any(Number), publishedCourses: expect.any(Number), pendingApplications: expect.any(Number) });
   });
 });
+
+
+describe("academy.commerce and payments", () => {
+  it("validates checkout identifiers before database access", async () => {
+    await expect(appRouter.createCaller(contextFor("estudante")).academy.checkoutCourse({ courseId: 0 })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(appRouter.createCaller(contextFor("user")).academy.student.createPayment({ courseId: 0, acceptedTerms: true })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("keeps payment administration restricted to admins", async () => {
+    await expect(appRouter.createCaller(contextFor("estudante")).academy.admin.payments()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(appRouter.createCaller(contextFor("formador")).academy.admin.confirmPayment({ paymentId: 1, status: "paid", transactionId: "txn-test-1" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("allows authenticated students to read their own payment history", async () => {
+    await expect(appRouter.createCaller(contextFor("estudante")).academy.student.payments()).resolves.toBeDefined();
+  });
+});

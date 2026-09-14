@@ -11,6 +11,7 @@ import { serveStatic, setupVite } from "./vite";
 import { registerUploadRoutes } from "./uploads";
 import { registerReportExportRoutes } from "./reportExports";
 import { registerCompanyExportRoutes } from "./companyExports";
+import { registerPaymentWebhookRoute } from "./paymentWebhook";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -41,6 +42,7 @@ async function startServer() {
   registerUploadRoutes(app);
   registerReportExportRoutes(app);
   registerCompanyExportRoutes(app);
+  registerPaymentWebhookRoute(app);
   registerOAuthRoutes(app);
   // tRPC API
   app.use(

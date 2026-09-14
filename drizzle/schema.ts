@@ -79,6 +79,9 @@ export const courses = mysqlTable(
     level: mysqlEnum("level", ["iniciante", "intermedio", "avancado"]).default("iniciante").notNull(),
     price: decimal("price", { precision: 10, scale: 2 }).default("0.00").notNull(),
     currency: varchar("currency", { length: 3 }).default("MZN").notNull(),
+    promotionalPrice: decimal("promotionalPrice", { precision: 10, scale: 2 }),
+    pricingType: mysqlEnum("pricingType", ["free", "paid"]).default("free").notNull(),
+    commercialStatus: mysqlEnum("commercialStatus", ["available", "hidden", "retired"]).default("available").notNull(),
     status: mysqlEnum("status", ["draft", "published", "archived"]).default("draft").notNull(),
     certificateEnabled: boolean("certificateEnabled").default(true).notNull(),
     requirements: text("requirements"),
@@ -152,6 +155,24 @@ export const enrollments = mysqlTable(
     completedAt: timestamp("completedAt"),
   },
   table => ({ enrollmentIdx: uniqueIndex("enrollments_course_user_uidx").on(table.courseId, table.userId) })
+);
+
+export const payments = mysqlTable(
+  "payments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "restrict" }),
+    courseId: int("courseId").notNull().references(() => courses.id, { onDelete: "restrict" }),
+    amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull(),
+    status: mysqlEnum("status", ["pending", "processing", "paid", "failed", "cancelled", "refunded"]).default("pending").notNull(),
+    provider: varchar("provider", { length: 80 }).default("manual_pending").notNull(),
+    transactionId: varchar("transactionId", { length: 180 }).unique(),
+    receiptFileKey: text("receiptFileKey"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({ paymentUserIdx: index("payments_user_idx").on(table.userId), paymentCourseIdx: index("payments_course_idx").on(table.courseId), paymentStatusIdx: index("payments_status_idx").on(table.status) })
 );
 
 export const quizzes = mysqlTable("quizzes", {
