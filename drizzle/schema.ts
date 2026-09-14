@@ -348,6 +348,22 @@ export const notifications = mysqlTable(
   table => ({ notificationUserIdx: index("notifications_user_idx").on(table.userId) })
 );
 
+export const notificationPreferences = mysqlTable(
+  "notification_preferences",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    emailEnabled: boolean("emailEnabled").default(true).notNull(),
+    courseUpdates: boolean("courseUpdates").default(true).notNull(),
+    assessmentUpdates: boolean("assessmentUpdates").default(true).notNull(),
+    paymentUpdates: boolean("paymentUpdates").default(true).notNull(),
+    companyUpdates: boolean("companyUpdates").default(true).notNull(),
+    securityUpdates: boolean("securityUpdates").default(true).notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({ userIdx: uniqueIndex("notification_preferences_user_uidx").on(table.userId) })
+);
+
 export const wishlist = mysqlTable(
   "wishlist",
   {

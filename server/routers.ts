@@ -113,6 +113,7 @@ const lessonInput = z.object({ moduleId: z.number().int().positive(), title: z.s
 const quizInput = z.object({ courseId: z.number().int().positive(), moduleId: z.number().int().positive().optional(), title: z.string().min(2), description: z.string().optional(), passingScore: z.number().int().min(0).max(100), attemptsAllowed: z.number().int().positive(), dueAt: z.coerce.date().optional() });
 const questionInput = z.object({ quizId: z.number().int().positive(), type: z.enum(["multiple_choice", "true_false", "open"]), question: z.string().min(5), options: z.array(z.string()).optional(), points: z.number().int().positive(), position: z.number().int().min(0) });
 const assignmentInput = z.object({ courseId: z.number().int().positive(), moduleId: z.number().int().positive().optional(), title: z.string().min(2), instructions: z.string().min(10), dueAt: z.coerce.date().optional(), maxScore: z.number().int().positive() });
+const categorySlug = z.string().min(2).transform(value => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")).refine(value => /^[a-z0-9-]+$/.test(value), "Slug inválido");
 
 export const appRouter = router({
   system: systemRouter,
@@ -188,8 +189,8 @@ export const appRouter = router({
       updateCourse: adminProcedure.input(courseInput.extend({ id: z.number().int().positive() })).mutation(({ input }) => updateAdminCourse(input)),
       deleteCourse: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteAdminCourse(input.id)),
       categories: adminProcedure.query(() => listAdminCategories()),
-      createCategory: adminProcedure.input(z.object({ name: z.string().min(2), slug: z.string().min(2).regex(/^[a-z0-9-]+$/), description: z.string().optional() })).mutation(({ input }) => createAdminCategory(input)),
-      updateCategory: adminProcedure.input(z.object({ id: z.number().int().positive(), name: z.string().min(2), slug: z.string().min(2).regex(/^[a-z0-9-]+$/), description: z.string().optional() })).mutation(({ input }) => updateAdminCategory(input)),
+      createCategory: adminProcedure.input(z.object({ name: z.string().min(2), slug: categorySlug, description: z.string().optional() })).mutation(({ input }) => createAdminCategory(input)),
+      updateCategory: adminProcedure.input(z.object({ id: z.number().int().positive(), name: z.string().min(2), slug: categorySlug, description: z.string().optional() })).mutation(({ input }) => updateAdminCategory(input)),
       deleteCategory: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteAdminCategory(input.id)),
       instructors: adminProcedure.query(() => listAdminInstructors()),
       createInstructor: adminProcedure.input(z.object({ name: z.string().min(2), email: z.string().email(), openId: z.string().min(3) })).mutation(({ input }) => createInstructor(input)),
