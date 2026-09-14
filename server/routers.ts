@@ -92,15 +92,17 @@ const studentProcedure = requireRoles("estudante", "user", "admin");
 const formadorProcedure = requireRoles("formador", "admin");
 const companyProcedure = requireRoles("empresa");
 
+const moneyString = (required: boolean) => z.string().transform(value => value.trim().replace(/\s/g, "").replace(/,/g, ".")).refine(value => required ? /^\d+(\.\d{1,2})?$/.test(value) : value === "" || /^\d+(\.\d{1,2})?$/.test(value), "Preço inválido");
+
 const courseInput = z.object({
   title: z.string().min(3),
   slug: z.string().min(3).regex(/^[a-z0-9-]+$/),
   description: z.string().min(10),
   categoryId: z.number().int().positive().optional(),
   level: z.enum(["iniciante", "intermedio", "avancado"]),
-  price: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  price: moneyString(true),
   currency: z.string().length(3).default("MZN"),
-  promotionalPrice: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+  promotionalPrice: moneyString(false).optional(),
   pricingType: z.enum(["free", "paid"]).default("free"),
   commercialStatus: z.enum(["available", "hidden", "retired"]).default("available"),
   status: z.enum(["draft", "published", "archived"]),
