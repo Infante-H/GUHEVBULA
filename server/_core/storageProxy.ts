@@ -1,11 +1,24 @@
 import type { Express } from "express";
 import { ENV } from "./env";
+import { sdk } from "./sdk";
+import { canAccessLessonMaterial } from "../db";
 
 export function registerStorageProxy(app: Express) {
   app.get("/manus-storage/*", async (req, res) => {
     const key = (req.params as Record<string, string>)[0];
     if (!key) {
       res.status(400).send("Missing storage key");
+      return;
+    }
+
+    try {
+      const user = await sdk.authenticateRequest(req as any);
+      if (!user || !(await canAccessLessonMaterial(user.id, key))) {
+        res.status(403).send("Acesso ao ficheiro não autorizado");
+        return;
+      }
+    } catch {
+      res.status(403).send("Acesso ao ficheiro não autorizado");
       return;
     }
 

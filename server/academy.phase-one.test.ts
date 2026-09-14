@@ -184,3 +184,19 @@ describe("academy.commerce and payments", () => {
     await expect(appRouter.createCaller(contextFor("estudante")).academy.student.payments()).resolves.toBeDefined();
   });
 });
+
+
+describe("academy.phase-eight security regression", () => {
+  it("keeps protected role boundaries intact", async () => {
+    await expect(appRouter.createCaller(contextFor("estudante")).academy.admin.overview()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(appRouter.createCaller(contextFor("empresa")).academy.formador.performance()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(appRouter.createCaller(contextFor("formador")).academy.company.dashboard()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(appRouter.createCaller(contextFor("estudante")).academy.admin.payments()).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rejects invalid identifiers before protected data access", async () => {
+    await expect(appRouter.createCaller(contextFor("estudante")).academy.student.course({ courseId: 0 })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(appRouter.createCaller(contextFor("admin")).academy.admin.deleteCourse({ id: 0 })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(appRouter.createCaller(contextFor("admin")).academy.admin.confirmPayment({ paymentId: 0, status: "paid", transactionId: "txn" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+});

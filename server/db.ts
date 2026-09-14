@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -283,6 +283,11 @@ export async function getCourseLearning(courseId: number, userId: number) {
   if (!db) return fallbackLearning;
   const courseRows = await db.select().from(courses).where(eq(courses.id, courseId)).limit(1);
   if (!courseRows[0]) return fallbackLearning;
+  const userRows = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+  const isAdmin = userRows[0]?.role === "admin";
+  const enrollmentRows = await db.select({ id: enrollments.id }).from(enrollments).where(and(eq(enrollments.courseId, courseId), eq(enrollments.userId, userId), or(eq(enrollments.status, "active"), eq(enrollments.status, "completed")))).limit(1);
+  const instructorAssignmentRows = await db.select({ id: courseInstructors.id }).from(courseInstructors).where(and(eq(courseInstructors.courseId, courseId), eq(courseInstructors.userId, userId))).limit(1);
+  if (!isAdmin && !enrollmentRows[0] && !instructorAssignmentRows[0]) throw new Error("Não tem acesso a este curso.");
   const moduleRows = await db.select().from(modules).where(eq(modules.courseId, courseId)).orderBy(modules.position);
   const moduleIds = moduleRows.map(item => item.id);
   const lessonRows = moduleIds.length ? await db.select().from(lessons).where(inArray(lessons.moduleId, moduleIds)).orderBy(lessons.position) : [];
@@ -505,10 +510,29 @@ export async function getLessonForUpload(lessonId: number) {
   return { id: row[0].id, instructorIds: assignmentsRows.map(item => item.userId) };
 }
 
+export async function canAccessLessonMaterial(userId: number, key: string) {
+  const match = key.match(/^academy\/lessons\/(\d+)\//);
+  if (!match) return false;
+  const lessonId = Number(match[1]);
+  const db = await getDb();
+  if (!db) return false;
+  const userRows = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+  if (userRows[0]?.role === "admin") return true;
+  const lessonRows = await db.select({ courseId: modules.courseId }).from(lessons).innerJoin(modules, eq(lessons.moduleId, modules.id)).where(eq(lessons.id, lessonId)).limit(1);
+  if (!lessonRows[0]) return false;
+  const enrollmentRows = await db.select({ id: enrollments.id }).from(enrollments).where(and(eq(enrollments.courseId, lessonRows[0].courseId), eq(enrollments.userId, userId), or(eq(enrollments.status, "active"), eq(enrollments.status, "completed")))).limit(1);
+  if (enrollmentRows[0]) return true;
+  const instructorRows = await db.select({ id: courseInstructors.id }).from(courseInstructors).where(and(eq(courseInstructors.courseId, lessonRows[0].courseId), eq(courseInstructors.userId, userId))).limit(1);
+  return Boolean(instructorRows[0]);
+}
+
 export async function getInstructorPerformance(userId: number, filters: { fromDate?: Date; toDate?: Date; courseId?: number; cohort?: string; studentId?: number } = {}) {
   const db = await getDb();
   if (!db) return { courses: [{ courseId: 1, title: fallbackLearning.course.title, students: 18, averageProgress: 62, completionRate: 34, averageQuizScore: 78, pendingAssignments: 4 }], totals: { students: 18, averageProgress: 62, completionRate: 34, averageQuizScore: 78, pendingAssignments: 4 }, filterOptions: { cohorts: ["Geral"], students: [{ id: 10, name: "Aluno demo", email: "aluno@vuka.test" }] } };
-  const assigned = await db.select({ courseId: courseInstructors.courseId, title: courses.title }).from(courseInstructors).innerJoin(courses, eq(courseInstructors.courseId, courses.id)).where(eq(courseInstructors.userId, userId));
+  const roleRows = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+  const assigned = roleRows[0]?.role === "admin"
+    ? await db.select({ courseId: courses.id, title: courses.title }).from(courses).where(eq(courses.status, "published"))
+    : await db.select({ courseId: courseInstructors.courseId, title: courses.title }).from(courseInstructors).innerJoin(courses, eq(courseInstructors.courseId, courses.id)).where(eq(courseInstructors.userId, userId));
   const courseIds = assigned.map(row => row.courseId).filter(id => !filters.courseId || id === filters.courseId);
   if (!courseIds.length) return { courses: [], totals: { students: 0, averageProgress: 0, completionRate: 0, averageQuizScore: 0, pendingAssignments: 0 }, filterOptions: { cohorts: [], students: [] } };
   const enrollmentRows = await db.select().from(enrollments).where(inArray(enrollments.courseId, courseIds));

@@ -19,10 +19,10 @@ export function registerUploadRoutes(app: Express) {
       const body = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body ?? []);
       if (!Number.isInteger(lessonId) || lessonId <= 0) return res.status(400).json({ message: "lessonId inválido." });
       if (!body.length || body.length > maxSize) return res.status(400).json({ message: "O ficheiro deve ter entre 1 byte e 250 MB." });
-      if (!allowedTypes.has(mimeType) && !mimeType.startsWith("text/")) return res.status(415).json({ message: "Tipo de ficheiro não suportado." });
+      if (!allowedTypes.has(mimeType) && !["text/vtt", "text/plain"].includes(mimeType)) return res.status(415).json({ message: "Tipo de ficheiro não suportado." });
       const lesson = await getLessonForUpload(lessonId);
       if (!lesson) return res.status(404).json({ message: "Aula não encontrada." });
-      if (user.role === "formador" && lesson.instructorIds.length > 0 && !lesson.instructorIds.includes(user.id)) return res.status(403).json({ message: "Não pode editar esta aula." });
+      if (user.role === "formador" && !lesson.instructorIds.includes(user.id)) return res.status(403).json({ message: "Não pode editar esta aula." });
       const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-120);
       const uploaded = await storagePut(`academy/lessons/${lessonId}/${Date.now()}-${safeName}`, body, mimeType);
       const materialId = await createLessonMaterial({ lessonId, name: filename, fileKey: uploaded.key, fileUrl: uploaded.url, mimeType, isPrivate: true });
