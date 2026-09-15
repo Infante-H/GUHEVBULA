@@ -173,3 +173,21 @@ As rotas `/admin/empresas`, `/admin/empresas/candidaturas` e `/admin/utilizadore
 ### Segurança e operação
 
 Os procedimentos B2B são protegidos por `companyProcedure` e limitam membros, cursos, atribuições, desempenho e certificados à organização autenticada. As operações administrativas usam `adminProcedure`. A tabela `audit_logs` regista alterações sensíveis e a tabela `notifications` suporta avisos de atribuição, convites e aprovação de candidaturas. A exportação PDF empresarial é autenticada no servidor e utiliza os mesmos limites de isolamento da área da empresa.
+
+
+## Fase 9 — Email transacional e notificações
+
+A plataforma inclui um serviço de email transacional configurável por ambiente, sem credenciais no código. O serviço envia JSON para o provider definido em `EMAIL_PROVIDER_URL`, usando `EMAIL_PROVIDER_KEY` como Bearer token, `EMAIL_FROM` como remetente e opcionalmente `EMAIL_REPLY_TO` como endereço de resposta. Se o provider não estiver configurado, o envio é registado como `skipped` e a operação principal não falha.
+
+Os templates preparados cobrem criação de conta, recuperação de senha, confirmação de matrícula, pagamento confirmado, curso atribuído, novo trabalho, trabalho corrigido, nova nota, certificado disponível, convite de colaborador, aprovação e rejeição de empresa. As notificações persistidas agora suportam consulta geral ou apenas não lidas, marcação individual, marcação global e preferências por utilizador para email, cursos, avaliações, pagamentos, empresas e segurança.
+
+Variáveis opcionais do backend:
+
+```env
+EMAIL_PROVIDER_URL=https://api.example.com/v1/send
+EMAIL_PROVIDER_KEY=provider-secret
+EMAIL_FROM=VUKA Academy <noreply@example.com>
+EMAIL_REPLY_TO=suporte@example.com
+```
+
+O payload enviado ao provider contém `from`, `replyTo`, `to`, `subject`, `text` e `html`. O provider deve responder com um status HTTP 2xx; falhas são capturadas e registadas sem interromper a criação da notificação.

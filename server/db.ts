@@ -284,6 +284,7 @@ export async function getCourseLearning(courseId: number, userId: number) {
   const courseRows = await db.select().from(courses).where(eq(courses.id, courseId)).limit(1);
   if (!courseRows[0]) return fallbackLearning;
   const userRows = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!userRows[0]) return fallbackLearning;
   const isAdmin = userRows[0]?.role === "admin";
   const enrollmentRows = await db.select({ id: enrollments.id }).from(enrollments).where(and(eq(enrollments.courseId, courseId), eq(enrollments.userId, userId), or(eq(enrollments.status, "active"), eq(enrollments.status, "completed")))).limit(1);
   const instructorAssignmentRows = await db.select({ id: courseInstructors.id }).from(courseInstructors).where(and(eq(courseInstructors.courseId, courseId), eq(courseInstructors.userId, userId))).limit(1);

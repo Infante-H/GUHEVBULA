@@ -8,4 +8,8 @@ export const ENV = {
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   paymentWebhookSecret: process.env.PAYMENT_WEBHOOK_SECRET ?? "",
+  emailProviderUrl: process.env.EMAIL_PROVIDER_URL ?? "",
+  emailProviderKey: process.env.EMAIL_PROVIDER_KEY ?? "",
+  emailFrom: process.env.EMAIL_FROM ?? "",
+  emailReplyTo: process.env.EMAIL_REPLY_TO ?? "",
 };

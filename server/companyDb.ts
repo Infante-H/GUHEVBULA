@@ -1,6 +1,7 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { getDb } from "./db";
-import { auditLogs, certificates, companyCourseAssignments, companyPartnershipApplications, companyUsers, companies, courses, enrollments, notifications, studentProgress, users } from "../drizzle/schema";
+import { auditLogs, certificates, companyCourseAssignments, companyPartnershipApplications, companyUsers, companies, courses, enrollments, notificationPreferences, notifications, studentProgress, users } from "../drizzle/schema";
+import { sendNotificationEmail, type TransactionalEmailType } from "./email";
 
 export async function writeAudit(input: { userId?: number; action: string; resource: string; resourceId?: number; result?: string }) {
   const db = await getDb();
@@ -13,6 +14,13 @@ export async function createNotification(input: { userId: number; type: string; 
   const db = await getDb();
   if (!db) return { success: true };
   const result = await db.insert(notifications).values(input);
+  const recipient = await db.select({ email: users.email }).from(users).where(eq(users.id, input.userId)).limit(1);
+  const preferences = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, input.userId)).limit(1);
+  const preference = preferences[0];
+  const category = input.type.includes("payment") ? "paymentUpdates" : input.type.includes("company") || input.type.includes("invitation") ? "companyUpdates" : input.type.includes("assignment") || input.type.includes("grade") || input.type.includes("quiz") ? "assessmentUpdates" : input.type.includes("course") || input.type.includes("enrollment") || input.type.includes("certificate") ? "courseUpdates" : "securityUpdates";
+  if (recipient[0]?.email && (preference?.emailEnabled ?? true) && (preference?.[category] ?? true)) {
+    await sendNotificationEmail({ to: recipient[0].email, type: input.type as TransactionalEmailType, subject: input.title, body: input.body ?? input.title });
+  }
   return { success: true, id: Number(result[0].insertId) };
 }
 
@@ -167,8 +175,11 @@ export async function listCompanyCertificates(userId: number) {
   return rows.map(row => ({ ...row, user: people.find(person => person.id === row.userId), course: courseRows.find(course => course.id === row.courseId) }));
 }
 
-export async function listNotifications(userId: number) { const db = await getDb(); if (!db) return []; return db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)); }
+export async function listNotifications(userId: number, unreadOnly = false) { const db = await getDb(); if (!db) return []; const rows = await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)); return unreadOnly ? rows.filter(row => !row.readAt) : rows; }
 export async function markNotificationRead(userId: number, id: number) { const db = await getDb(); if (!db) return { success: true }; await db.update(notifications).set({ readAt: new Date() }).where(and(eq(notifications.id, id), eq(notifications.userId, userId))); return { success: true }; }
+export async function markAllNotificationsRead(userId: number) { const db = await getDb(); if (!db) return { success: true }; await db.update(notifications).set({ readAt: new Date() }).where(and(eq(notifications.userId, userId), isNull(notifications.readAt))); return { success: true }; }
+export async function getNotificationPreferences(userId: number) { const db = await getDb(); if (!db) return { emailEnabled: true, courseUpdates: true, assessmentUpdates: true, paymentUpdates: true, companyUpdates: true, securityUpdates: true }; const rows = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, userId)).limit(1); return rows[0] ?? { emailEnabled: true, courseUpdates: true, assessmentUpdates: true, paymentUpdates: true, companyUpdates: true, securityUpdates: true }; }
+export async function updateNotificationPreferences(userId: number, input: { emailEnabled: boolean; courseUpdates: boolean; assessmentUpdates: boolean; paymentUpdates: boolean; companyUpdates: boolean; securityUpdates: boolean }) { const db = await getDb(); if (!db) return { success: true }; await db.insert(notificationPreferences).values({ userId, ...input }).onDuplicateKeyUpdate({ set: input }); return { success: true }; }
 
 export async function getAdminOverview() {
   const db = await getDb(); if (!db) return { students: 0, formadores: 0, companies: 0, courses: 0, publishedCourses: 0, enrollments: 0, completedCourses: 0, certificates: 0, pendingApplications: 0 };
