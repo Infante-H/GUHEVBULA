@@ -191,3 +191,24 @@ EMAIL_REPLY_TO=suporte@example.com
 ```
 
 O payload enviado ao provider contém `from`, `replyTo`, `to`, `subject`, `text` e `html`. O provider deve responder com um status HTTP 2xx; falhas são capturadas e registadas sem interromper a criação da notificação.
+
+
+## Fase 10 — Preparação para hospedagem externa
+
+A aplicação foi auditada para execução fora do Manus sem reconstruir funcionalidades. A arquitetura continua baseada em React/Vite no frontend, Express/tRPC no backend, Drizzle ORM, MySQL/TiDB, OAuth/OIDC e storage S3-compatible. Consulte [`DEPLOYMENT.md`](./DEPLOYMENT.md) para o checklist de migração, configuração de banco, backups, storage, OAuth, email, pagamentos e produção.
+
+### Configuração externa
+
+Use um secret manager para configurar `DATABASE_URL`, `JWT_SECRET`, `VITE_APP_ID`, `OAUTH_SERVER_URL`, `VITE_OAUTH_PORTAL_URL`, `OWNER_OPEN_ID`, `OWNER_NAME`, `PAYMENT_WEBHOOK_SECRET`, `EMAIL_PROVIDER_URL`, `EMAIL_PROVIDER_KEY`, `EMAIL_FROM` e `EMAIL_REPLY_TO`. As variáveis `BUILT_IN_FORGE_API_URL` e `BUILT_IN_FORGE_API_KEY` continuam sendo o adapter de storage atual; para independência total, substitua esse adapter por S3 externo preservando os contratos de `server/storage.ts`.
+
+### Acesso administrativo verificado
+
+- **Rota do dashboard:** `/admin`.
+- **Método de login:** OAuth/OIDC através de `/api/oauth/callback`, com sessão HttpOnly assinada por `JWT_SECRET`.
+- **Role admin:** `ctx.user.role === "admin"`, aplicado no backend por `adminProcedure`.
+- **Administrador existente no banco atual:** sim — existe uma conta admin ativa associada ao login OAuth Google; nenhuma password local é armazenada.
+- **Acesso correto:** entrar pelo mesmo provider OAuth usando a conta Google associada ao registo admin; não tentar criar password no frontend.
+- **Criação/ativação do primeiro admin externo:** fazer login uma vez para criar o utilizador e executar `UPDATE users SET role = 'admin', isActive = 1 WHERE openId = '...'` com acesso administrativo ao MySQL. O `OWNER_OPEN_ID` também promove automaticamente o owner no callback.
+- **Proteção:** confirmada no backend; não autenticados, estudantes, formadores e empresas recebem `FORBIDDEN` ao chamar procedimentos admin. A rota visual não é a fronteira de segurança.
+
+O seed demonstra conteúdo, roles e cursos, mas não contém credenciais nem promove uma conta por email. O primeiro admin deve ser promovido por `OWNER_OPEN_ID` ou por SQL controlado conforme o guia de deployment.
